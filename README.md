@@ -27,11 +27,12 @@ Fork this repo, then deploy at [streamlit.io/cloud](https://streamlit.io/cloud).
 ### 4. Docker
 
 ```bash
-docker-compose up        # starts MagiC server + all workers
-# then in another terminal:
-docker build -t magic-ui .
-docker run -p 8501:8501 magic-ui
-# open http://localhost:8501
+# Easiest: all-in-one (server + workers + UI in one container)
+docker compose up
+# Then open http://localhost:8501
+
+# Or split mode (separate containers):
+docker compose --profile split up
 ```
 
 ### 5. Local

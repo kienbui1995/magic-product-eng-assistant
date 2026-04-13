@@ -1,10 +1,23 @@
 services:
+  # Default: all-in-one (docker compose up)
+  magic-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile.allinone
+    ports:
+      - "8501:8501"
+
+  # Split mode (docker compose --profile split up)
   magic-server:
-    image: magic
+    profiles: [split]
+    image: ghcr.io/kienbui1995/magic:latest
     ports:
       - "8080:8080"
+    environment:
+      MAGIC_RATE_LIMIT_DISABLE: "true"
 
   spec-writer:
+    profiles: [split]
     build: &worker-build
       context: .
       dockerfile_inline: |
@@ -19,6 +32,7 @@ services:
       - magic-server
 
   tech-design:
+    profiles: [split]
     build: *worker-build
     command: python workers/tech_design.py
     environment:
@@ -27,6 +41,7 @@ services:
       - magic-server
 
   code-implement:
+    profiles: [split]
     build: *worker-build
     command: python workers/code_implement.py
     environment:
@@ -35,6 +50,7 @@ services:
       - magic-server
 
   qa:
+    profiles: [split]
     build: *worker-build
     command: python workers/qa.py
     environment:
@@ -43,9 +59,21 @@ services:
       - magic-server
 
   release-notes:
+    profiles: [split]
     build: *worker-build
     command: python workers/release_notes.py
     environment:
       MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server
+
+  streamlit-ui:
+    profiles: [split]
+    build:
+      context: .
+    ports:
+      - "8501:8501"
+    environment:
+      MAGIC_SERVER_URL: http://magic-server:8080
     depends_on:
       - magic-server
