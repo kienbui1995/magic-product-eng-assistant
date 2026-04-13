@@ -4,6 +4,51 @@ import requests
 
 st.set_page_config(page_title="MagiC — AI Worker Management", page_icon="🪄", layout="wide")
 
+# ── Custom CSS for better visuals ────────────────────────────────────────────
+st.markdown("""<style>
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #667eea11, #764ba211);
+        border: 1px solid #667eea33;
+        border-radius: 12px;
+        padding: 16px 20px;
+    }
+    [data-testid="stMetricLabel"] { font-size: 0.85rem; font-weight: 600; }
+    [data-testid="stMetricValue"] { font-size: 1.6rem; }
+    [data-testid="stExpander"] {
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    div[data-testid="stProgress"] > div > div > div {
+        border-radius: 8px;
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 24px;
+        font-weight: 600;
+    }
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #f8f9fa, #ffffff);
+    }
+</style>""", unsafe_allow_html=True)
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 PROVIDERS = {
     "None (mock data)": ("", "", ""),
