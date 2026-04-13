@@ -95,12 +95,12 @@ with st.sidebar:
 
 # ── Mock Data ────────────────────────────────────────────────────────────────
 MOCK_WORKERS = [
-    {"id": "w_001", "name": "SpecWriter", "status": "active", "capabilities": [{"name": "spec_writing", "est_cost_per_call": 0.05}], "current_load": 1, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 10.0}, "total_cost_today": 0.15, "team_id": "team_product", "tags": {"lang": "en", "domain": "product"}, "session_mode": "stateless"},
-    {"id": "w_002", "name": "TechDesign", "status": "active", "capabilities": [{"name": "tech_design", "est_cost_per_call": 0.08}], "current_load": 0, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 10.0}, "total_cost_today": 0.08, "team_id": "team_eng", "tags": {"lang": "en", "domain": "engineering"}, "session_mode": "stateless"},
-    {"id": "w_003", "name": "CodeImplement", "status": "active", "capabilities": [{"name": "code_implementation", "est_cost_per_call": 0.12}], "current_load": 2, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 15.0}, "total_cost_today": 0.36, "team_id": "team_eng", "tags": {"lang": "en", "domain": "engineering"}, "session_mode": "stateless"},
-    {"id": "w_004", "name": "QA", "status": "active", "capabilities": [{"name": "qa_testing", "est_cost_per_call": 0.04}], "current_load": 0, "limits": {"max_concurrent_tasks": 10, "max_cost_per_day": 5.0}, "total_cost_today": 0.12, "team_id": "team_qa", "tags": {"lang": "en", "domain": "quality"}, "session_mode": "stateless"},
-    {"id": "w_005", "name": "ReleaseNotes", "status": "active", "capabilities": [{"name": "release_notes", "est_cost_per_call": 0.02}], "current_load": 0, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 3.0}, "total_cost_today": 0.02, "team_id": "team_product", "tags": {"lang": "en", "domain": "product"}, "session_mode": "stateless"},
-    {"id": "w_006", "name": "CheapBot", "status": "paused", "capabilities": [{"name": "spec_writing", "est_cost_per_call": 0.01}], "current_load": 0, "limits": {"max_concurrent_tasks": 3, "max_cost_per_day": 1.0}, "total_cost_today": 1.02, "team_id": "team_product", "tags": {"lang": "en"}, "session_mode": "stateless"},
+    {"id": "w_001", "name": "SpecWriter", "status": "active", "framework": "🐍 LangChain", "capabilities": [{"name": "spec_writing", "est_cost_per_call": 0.05}], "current_load": 1, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 10.0}, "total_cost_today": 0.15, "team_id": "team_product", "tags": {"lang": "en", "domain": "product"}, "session_mode": "stateless"},
+    {"id": "w_002", "name": "TechDesign", "status": "active", "framework": "🦜 CrewAI", "capabilities": [{"name": "tech_design", "est_cost_per_call": 0.08}], "current_load": 0, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 10.0}, "total_cost_today": 0.08, "team_id": "team_eng", "tags": {"lang": "en", "domain": "engineering"}, "session_mode": "stateless"},
+    {"id": "w_003", "name": "CodeImplement", "status": "active", "framework": "📘 TypeScript SDK", "capabilities": [{"name": "code_implementation", "est_cost_per_call": 0.12}], "current_load": 2, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 15.0}, "total_cost_today": 0.36, "team_id": "team_eng", "tags": {"lang": "en", "domain": "engineering"}, "session_mode": "stateless"},
+    {"id": "w_004", "name": "QA", "status": "active", "framework": "🔵 Go SDK", "capabilities": [{"name": "qa_testing", "est_cost_per_call": 0.04}], "current_load": 0, "limits": {"max_concurrent_tasks": 10, "max_cost_per_day": 5.0}, "total_cost_today": 0.12, "team_id": "team_qa", "tags": {"lang": "en", "domain": "quality"}, "session_mode": "stateless"},
+    {"id": "w_005", "name": "ReleaseNotes", "status": "active", "framework": "🐍 Python SDK", "capabilities": [{"name": "release_notes", "est_cost_per_call": 0.02}], "current_load": 0, "limits": {"max_concurrent_tasks": 5, "max_cost_per_day": 3.0}, "total_cost_today": 0.02, "team_id": "team_product", "tags": {"lang": "en", "domain": "product"}, "session_mode": "stateless"},
+    {"id": "w_006", "name": "CheapBot", "status": "paused", "framework": "🐍 Python SDK", "capabilities": [{"name": "spec_writing", "est_cost_per_call": 0.01}], "current_load": 0, "limits": {"max_concurrent_tasks": 3, "max_cost_per_day": 1.0}, "total_cost_today": 1.02, "team_id": "team_product", "tags": {"lang": "en"}, "session_mode": "stateless"},
 ]
 
 MOCK_TEAMS = [
@@ -356,6 +356,26 @@ def render_output(step_id, out):
     else:
         st.json(out)
 
+# ── Why MagiC? ───────────────────────────────────────────────────────────────
+with st.expander("💡 **Why MagiC?** — See the difference", expanded=False):
+    b1, b2 = st.columns(2)
+    with b1:
+        st.markdown("### ❌ Without MagiC")
+        st.markdown("""- Each AI agent is a **standalone script** — no coordination
+- **No visibility** into what agents are doing or costing
+- **Manual routing** — you decide which agent handles what
+- **No cost control** — surprise bills from runaway agents
+- **Framework lock-in** — stuck with one tool (CrewAI OR LangChain)
+- **No failure recovery** — if an agent crashes, you restart manually""")
+    with b2:
+        st.markdown("### ✅ With MagiC")
+        st.markdown("""- Workers **join an organization**, get tasks assigned automatically
+- **Real-time monitoring** — see every task, cost, and event as it happens
+- **Smart routing** — best match, cheapest, fastest, or custom strategy
+- **Budget guardrails** — alerts at 80%, auto-pause at 100%
+- **Any framework** — CrewAI, LangChain, custom bots, any language
+- **Auto-recovery** — retry, skip, reassign on failure""")
+
 # ── Tabs ─────────────────────────────────────────────────────────────────────
 tab_wf, tab_workers, tab_routing, tab_policy, tab_cost, tab_kb, tab_arch = st.tabs(
     ["🔄 Workflows", "🤖 Workers", "🧭 Routing", "🛡️ Policies & RBAC", "💰 Cost Control", "📚 Knowledge", "🏗️ Architecture"])
@@ -392,6 +412,14 @@ with tab_wf:
                 {"id": "release", "task_type": "release_notes", "depends_on": ["code", "qa"]},
             ]
             user_input = {"idea": idea, "context": context}
+            steps_timing = [
+                ("spec", 0, 3.2, 0.05),
+                ("design", 3.2, 6.0, 0.08),
+                ("code", 6.0, 7.5, 0.12),
+                ("qa", 6.0, 7.2, 0.04),
+                ("release", 7.5, 8.3, 0.02),
+            ]
+            worker_names = {"spec": "SpecWriter", "design": "TechDesign", "code": "CodeImplement", "qa": "QA", "release": "ReleaseNotes"}
         else:
             bug = st.text_input("Bug Description", placeholder="e.g. Login crashes on Safari", key="wf_bug")
             steps_def = [
@@ -400,39 +428,153 @@ with tab_wf:
                 {"id": "verify", "task_type": "qa_testing", "depends_on": ["fix"]},
             ]
             user_input = {"spec": bug, "mode": "reproduce"}
+            steps_timing = [
+                ("reproduce", 0, 2.0, 0.04),
+                ("fix", 2.0, 4.0, 0.12),
+                ("verify", 4.0, 5.0, 0.04),
+            ]
+            worker_names = {"reproduce": "QA", "fix": "CodeImplement", "verify": "QA"}
+
+        failure_mode = st.selectbox("Failure simulation", ["None", "Retry (step fails then succeeds)", "Skip (step fails, workflow continues)", "Abort (step fails, workflow stops)"], key="fail_mode")
 
         if st.button("🚀 Launch Workflow", type="primary"):
+            wf_id = f"wf_{random.randint(1000,9999)}"
+            events = [f"[00.0s] workflow.started    id={wf_id}  name=\"{wf_type}\""]
             progress = st.empty()
             outputs = {}
+            fail_step_idx = 2  # 3rd step (0-indexed)
+            aborted = False
+
             for i, step in enumerate(steps_def):
+                if aborted:
+                    break
+                sname = step["id"]
+                wname = worker_names.get(sname, "Worker")
+                t_start = steps_timing[i][1] if i < len(steps_timing) else 0
+                t_end = steps_timing[i][2] if i < len(steps_timing) else 0
+                t_cost = steps_timing[i][3] if i < len(steps_timing) else 0
+                trace = f"trace_{random.randint(1000,9999)}"
+
+                events.append(f"[{t_start:05.1f}s] task.routed         step={sname}  worker={wname}  strategy=best_match")
+                events.append(f"[{t_start:05.1f}s] task.dispatched     step={sname}  worker={wname}  trace_id={trace}")
+
+                # Show progress
                 with progress.container():
                     cols = st.columns(len(steps_def))
                     for j, s in enumerate(steps_def):
-                        emoji = "✅" if j < i else ("🔄" if j == i else "⏳")
+                        if j < i:
+                            emoji = "✅"
+                        elif j == i:
+                            emoji = "🔄"
+                        elif aborted:
+                            emoji = "🚫"
+                        else:
+                            emoji = "⏳"
                         cols[j].markdown(f"**{emoji} {s['id']}**")
-                time.sleep(1.0 if not llm_key else 0.3)
-                outputs[step["id"]] = get_output(step["task_type"], user_input)
 
-            with progress.container():
-                cols = st.columns(len(steps_def))
-                for j, s in enumerate(steps_def):
-                    cols[j].markdown(f"**✅ {s['id']}**")
-            st.success(f"Workflow completed — {len(steps_def)} steps, trace_id: `trace_{random.randint(1000,9999)}`")
+                time.sleep(1.0 if not llm_key else 0.3)
+
+                # Failure handling on 3rd step
+                if failure_mode != "None" and i == fail_step_idx:
+                    latency = int((t_end - t_start) * 1000)
+                    events.append(f"[{t_end:05.1f}s] task.failed         step={sname}  error=\"simulated failure\"  latency={latency}ms")
+
+                    if "Retry" in failure_mode:
+                        with progress.container():
+                            cols = st.columns(len(steps_def))
+                            for j, s in enumerate(steps_def):
+                                emoji = "✅" if j < i else ("❌" if j == i else "⏳")
+                                cols[j].markdown(f"**{emoji} {s['id']}**")
+                        time.sleep(0.5)
+                        events.append(f"[{t_end:05.1f}s] task.retrying       step={sname}  attempt=2")
+                        with progress.container():
+                            cols = st.columns(len(steps_def))
+                            for j, s in enumerate(steps_def):
+                                emoji = "✅" if j < i else ("🔄" if j == i else "⏳")
+                                cols[j].markdown(f"**{emoji} {s['id']}**")
+                        time.sleep(1.0)
+                        events.append(f"[{t_end:05.1f}s] task.completed      step={sname}  cost=${t_cost:.2f}  latency={latency}ms  (retry succeeded)")
+                        outputs[sname] = get_output(step["task_type"], user_input)
+
+                    elif "Skip" in failure_mode:
+                        with progress.container():
+                            cols = st.columns(len(steps_def))
+                            for j, s in enumerate(steps_def):
+                                emoji = "✅" if j < i else ("⏭️" if j == i else "⏳")
+                                cols[j].markdown(f"**{emoji} {s['id']}**")
+                        events.append(f"[{t_end:05.1f}s] task.skipped        step={sname}  on_failure=skip")
+                        outputs[sname] = {"status": "skipped", "reason": "on_failure: skip"}
+
+                    elif "Abort" in failure_mode:
+                        events.append(f"[{t_end:05.1f}s] workflow.aborted    id={wf_id}  failed_step={sname}")
+                        with progress.container():
+                            cols = st.columns(len(steps_def))
+                            for j, s in enumerate(steps_def):
+                                if j < i:
+                                    emoji = "✅"
+                                elif j == i:
+                                    emoji = "❌"
+                                else:
+                                    emoji = "🚫"
+                                cols[j].markdown(f"**{emoji} {s['id']}**")
+                        aborted = True
+                        continue
+                else:
+                    latency = int((t_end - t_start) * 1000)
+                    events.append(f"[{t_end:05.1f}s] task.completed      step={sname}  cost=${t_cost:.2f}  latency={latency}ms")
+                    events.append(f"[{t_end:05.1f}s] cost.recorded       worker={wname}  total=${t_cost:.2f}  budget_pct={random.randint(1,5)}%")
+                    if i + 1 < len(steps_def):
+                        events.append(f"[{t_end:05.1f}s] policy.checked      step={steps_def[i+1]['id']}  ✅ allowed  0 violations")
+                    outputs[sname] = get_output(step["task_type"], user_input)
+
+            if aborted:
+                st.error(f"Workflow aborted at step '{steps_def[fail_step_idx]['id']}' — on_failure: abort")
+            else:
+                with progress.container():
+                    cols = st.columns(len(steps_def))
+                    for j, s in enumerate(steps_def):
+                        cols[j].markdown(f"**✅ {s['id']}**")
+
+                total_time = steps_timing[-1][2]
+                events.append(f"[{total_time:05.1f}s] workflow.completed  id={wf_id}  steps={len(steps_def)}  cost=${sum(c for _,_,_,c in steps_timing):.2f}  duration={total_time}s")
+                st.success(f"Workflow completed — {len(steps_def)} steps, trace_id: `{trace}`")
+
+                # Timeline
+                st.markdown("### ⏱️ Execution Timeline")
+                for name, start, end, cost in steps_timing:
+                    duration = end - start
+                    bar_start = int(start / total_time * 20)
+                    bar_len = max(1, int(duration / total_time * 20))
+                    bar = "░" * bar_start + "█" * bar_len + "░" * (20 - bar_start - bar_len)
+                    st.text(f"  {name:10s} {bar}  {duration:.1f}s  ${cost:.2f}")
+                st.text(f"  {'':10s} {'─' * 20}")
+                total_cost = sum(c for _,_,_,c in steps_timing)
+                sequential_time = sum(e - s for _,s,e,_ in steps_timing)
+                st.success(f"Total: {total_time:.1f}s  ${total_cost:.2f}  (saved {sequential_time - total_time:.1f}s via parallel execution)")
+
+            # Event stream
+            with st.expander("📡 Event Stream", expanded=False):
+                for evt in events:
+                    st.text(evt)
+
+            # Outputs
             for sid, out in outputs.items():
-                with st.expander(f"📄 Output: {sid}", expanded=(sid == "spec")):
+                with st.expander(f"📄 Output: {sid}", expanded=(sid == list(outputs.keys())[0] if outputs else False)):
                     render_output(sid, out)
 
 # ── Tab 2: Workers ───────────────────────────────────────────────────────────
 with tab_workers:
     st.subheader("Worker Fleet")
     st.caption("Workers register capabilities, MagiC routes tasks to the best match.")
+    st.info("🎯 **Any Framework, One Control Plane** — MagiC manages workers built with LangChain, CrewAI, Go, TypeScript, or any custom tool. They all speak the same protocol.")
 
     for w in MOCK_WORKERS:
         status_color = "🟢" if w["status"] == "active" else "🟡" if w["status"] == "paused" else "🔴"
         cap_names = ", ".join(c["name"] for c in w["capabilities"])
         cost_pct = (w["total_cost_today"] / w["limits"]["max_cost_per_day"] * 100) if w["limits"]["max_cost_per_day"] > 0 else 0
+        framework = w.get("framework", "")
 
-        with st.expander(f"{status_color} **{w['name']}** — `{cap_names}` — load: {w['current_load']}/{w['limits']['max_concurrent_tasks']}", expanded=False):
+        with st.expander(f"{status_color} **{w['name']}** ({framework}) — `{cap_names}`", expanded=False):
             c1, c2, c3 = st.columns(3)
             c1.metric("Status", w["status"])
             c2.metric("Cost Today", f"${w['total_cost_today']:.2f}", f"{cost_pct:.0f}% of budget")
@@ -595,6 +737,53 @@ with tab_kb:
 # ── Tab 7: Architecture ─────────────────────────────────────────────────────
 with tab_arch:
     st.subheader("MagiC Architecture")
+
+    st.subheader("Multi-Language SDKs")
+    st.caption("Same 10 lines of code in any language. Workers speak the MagiC protocol.")
+    sk1, sk2, sk3 = st.columns(3)
+    with sk1:
+        st.markdown("**🐍 Python**")
+        st.code('''from magic_ai_sdk import Worker
+
+worker = Worker(name="MyBot",
+                endpoint="http://localhost:9000")
+
+@worker.capability("summarize",
+                   description="Summarizes text")
+def summarize(text: str) -> str:
+    return llm.complete(text)
+
+worker.register("http://localhost:8080")
+worker.serve()''', language="python")
+    with sk2:
+        st.markdown("**🔵 Go**")
+        st.code('''w := magic.NewWorker("MyBot",
+    "http://localhost:9000")
+
+w.Capability("summarize",
+    "Summarizes text",
+    func(input map[string]any) (any, error) {
+        return llm.Complete(input["text"]), nil
+    })
+
+w.Register("http://localhost:8080")
+w.Run()''', language="go")
+    with sk3:
+        st.markdown("**📘 TypeScript**")
+        st.code('''import { Worker } from "magic-ai-sdk";
+
+const worker = new Worker({
+    name: "MyBot",
+    endpoint: "http://localhost:9000"
+});
+
+worker.capability("summarize",
+    "Summarizes text",
+    async (input) => llm.complete(input.text));
+
+await worker.register("http://localhost:8080");
+worker.serve();''', language="typescript")
+
     st.code("""
                 ┌──────────────────────────────────────────────┐
                 │              MagiC Core (Go)                 │
