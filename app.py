@@ -566,7 +566,13 @@ with tab_wf:
                 events.append(f"[{t_start:05.1f}s] task.routed         step={sname}  worker={wname}  strategy=best_match")
                 events.append(f"[{t_start:05.1f}s] task.dispatched     step={sname}  worker={wname}  trace_id={trace}")
 
-                # Show progress
+                # Show progress — parallel steps show as running simultaneously
+                parallel_with = None
+                if sname == "code":
+                    parallel_with = "qa"
+                elif sname == "qa":
+                    parallel_with = "code"
+
                 with progress.container():
                     cols = st.columns(len(steps_def))
                     for j, s in enumerate(steps_def):
@@ -574,6 +580,8 @@ with tab_wf:
                             emoji = "✅"
                         elif j == i:
                             emoji = "🔄"
+                        elif s["id"] == parallel_with:
+                            emoji = "🔄"  # show parallel step as also running
                         elif aborted:
                             emoji = "🚫"
                         else:
@@ -673,20 +681,34 @@ with tab_wf:
 # ── Tab 2: Workers ───────────────────────────────────────────────────────────
 with tab_workers:
     st.subheader("Worker Fleet")
-    st.caption("Workers register capabilities, MagiC routes tasks to the best match.")
     st.info("🎯 **Any Framework, One Control Plane** — MagiC manages workers built with LangChain, CrewAI, Go, TypeScript, or any custom tool. They all speak the same protocol.")
 
+    # Org hierarchy
+    st.markdown("**Organization Structure:**")
+    st.code("""  🏢 org_acme
+  ├── 📁 Product Team (budget: $20/day)
+  │   ├── 🐍 SpecWriter (LangChain)
+  │   ├── 🐍 ReleaseNotes (Python SDK)
+  │   └── 🐍 CheapBot (Python SDK) ⏸️ paused — over budget
+  ├── 📁 Engineering Team (budget: $30/day)
+  │   ├── 📘 CodeImplement (TypeScript SDK)
+  │   └── 🦜 TechDesign (CrewAI)
+  └── 📁 QA Team (budget: $10/day)
+      └── 🔵 QA (Go SDK)""", language=None)
+
+    st.markdown("**Worker Details:**")
     for w in MOCK_WORKERS:
         status_color = "🟢" if w["status"] == "active" else "🟡" if w["status"] == "paused" else "🔴"
         cap_names = ", ".join(c["name"] for c in w["capabilities"])
         cost_pct = (w["total_cost_today"] / w["limits"]["max_cost_per_day"] * 100) if w["limits"]["max_cost_per_day"] > 0 else 0
         framework = w.get("framework", "")
 
-        with st.expander(f"{status_color} **{w['name']}** ({framework}) — `{cap_names}`", expanded=False):
-            c1, c2, c3 = st.columns(3)
+        with st.expander(f"{status_color} **{w['name']}** ({framework}) — `{cap_names}` — load: {w['current_load']}/{w['limits']['max_concurrent_tasks']}", expanded=False):
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("Status", w["status"])
-            c2.metric("Cost Today", f"${w['total_cost_today']:.2f}", f"{cost_pct:.0f}% of budget")
-            c3.metric("Session Mode", w.get("session_mode", "stateless"))
+            c2.metric("Framework", framework)
+            c3.metric("Cost Today", f"${w['total_cost_today']:.2f}", f"{cost_pct:.0f}% of budget")
+            c4.metric("Session Mode", w.get("session_mode", "stateless"))
             st.json({"id": w["id"], "team": w["team_id"], "tags": w.get("tags", {}),
                       "capabilities": w["capabilities"], "limits": w["limits"]})
 
@@ -695,6 +717,7 @@ if view_mode != "🟢 Essentials":
  with tab_routing:
     st.subheader("Capability-Based Routing")
     st.caption("MagiC routes tasks to workers based on strategy. Try different strategies below.")
+    st.info("🔌 **Plugin System** — Routing uses the `Strategy` interface. Built-in: best_match, cheapest, specific. Add your own (round-robin, geo-aware, priority queue) by implementing `Strategy.Select()`. Change the dropdown below to see how different strategies pick different workers.")
 
     cap = st.selectbox("Required Capability", ["spec_writing", "tech_design", "code_implementation", "qa_testing", "release_notes"])
     strategy = st.selectbox("Routing Strategy", ["best_match", "cheapest", "specific"])
@@ -938,3 +961,22 @@ worker.serve();''', language="typescript")
     tc2.markdown("🟡 **SDK:** Python, Go, TypeScript")
     tc3.markdown("🟢 **Storage:** Memory / SQLite / PostgreSQL")
     tc4.markdown("📊 **Observability:** Prometheus + JSON logs")
+
+    st.divider()
+    st.subheader("Production Features")
+    st.caption("Built-in capabilities for production deployments — no extra infrastructure needed.")
+    pf1, pf2 = st.columns(2)
+    with pf1:
+        st.markdown("""
+- 📡 **SSE Streaming** — `POST /api/v1/tasks/stream` returns real-time output as Server-Sent Events. Clients reconnect via `GET /tasks/{id}/stream`.
+- 🔔 **Webhooks** — Register endpoints to receive events (task.completed, budget.exceeded, etc.) with HMAC-SHA256 signatures. At-least-once delivery with exponential backoff.
+- 🔐 **Worker Tokens** — Per-org authentication. Workers authenticate with `Authorization: Bearer mct_...` tokens. Revocable, expirable.
+- 📋 **Audit Log** — Every API action logged with timestamp, org, worker, action, outcome. Queryable via `GET /orgs/{orgID}/audit`.
+""")
+    with pf2:
+        st.markdown("""
+- 💾 **Storage Backends** — Swap with one env var: `MAGIC_STORE=./magic.db` (SQLite) or `MAGIC_POSTGRES_URL=...` (PostgreSQL). In-memory for dev.
+- 📊 **Prometheus Metrics** — 14 metrics at `GET /metrics` (no auth): tasks total, worker count, cost, workflow steps, knowledge queries, webhook deliveries, SSE streams.
+- 🚦 **Rate Limiting** — Per-endpoint token bucket: 200 req/min for tasks, 10/min for registration. Per-org limits via `X-Org-ID` header.
+- 🌐 **1-Click Deploy** — Dockerfile, Railway, Render, Fly.io templates included. Single binary, ~8MB.
+""")
