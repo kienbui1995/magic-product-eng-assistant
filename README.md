@@ -1,8 +1,11 @@
 # 🪄 Magic Product & Engineering Assistant
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-magic--team--assistant-FF4B4B?logo=streamlit&logoColor=white)](https://magic-team-assistant.streamlit.app)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
+> **[👉 Try the live demo](https://magic-team-assistant.streamlit.app)** — no setup required
 
 AI-powered assistant for PM + dev teams. Uses [MagiC](https://github.com/kienbui1995/magic) as the orchestration control plane.
 
