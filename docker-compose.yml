@@ -1,0 +1,51 @@
+services:
+  magic-server:
+    image: magic
+    ports:
+      - "8080:8080"
+
+  spec-writer:
+    build: &worker-build
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        RUN pip install magic-ai-sdk
+        WORKDIR /app
+        COPY workers/ ./workers/
+    command: python workers/spec_writer.py
+    environment:
+      MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server
+
+  tech-design:
+    build: *worker-build
+    command: python workers/tech_design.py
+    environment:
+      MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server
+
+  code-implement:
+    build: *worker-build
+    command: python workers/code_implement.py
+    environment:
+      MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server
+
+  qa:
+    build: *worker-build
+    command: python workers/qa.py
+    environment:
+      MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server
+
+  release-notes:
+    build: *worker-build
+    command: python workers/release_notes.py
+    environment:
+      MAGIC_SERVER: http://magic-server:8080
+    depends_on:
+      - magic-server

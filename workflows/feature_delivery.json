@@ -1,0 +1,34 @@
+{
+  "name": "Feature Delivery",
+  "steps": [
+    {
+      "id": "spec",
+      "task_type": "spec_writing",
+      "input": { "idea": "{{idea}}", "context": "{{context}}" }
+    },
+    {
+      "id": "design",
+      "task_type": "tech_design",
+      "depends_on": ["spec"],
+      "input": { "prd": "{{steps.spec.output.prd}}" }
+    },
+    {
+      "id": "code",
+      "task_type": "code_implementation",
+      "depends_on": ["design"],
+      "input": { "design": "{{steps.design.output.hld}}" }
+    },
+    {
+      "id": "qa",
+      "task_type": "qa_testing",
+      "depends_on": ["design"],
+      "input": { "spec": "{{steps.spec.output.prd}}", "code_diff": "" }
+    },
+    {
+      "id": "release",
+      "task_type": "release_notes",
+      "depends_on": ["code", "qa"],
+      "input": { "changelog": "{{steps.code.output.pr_diff}}" }
+    }
+  ]
+}

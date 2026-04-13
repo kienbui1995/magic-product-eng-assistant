@@ -1,0 +1,22 @@
+{
+  "name": "Bug Lifecycle",
+  "steps": [
+    {
+      "id": "reproduce",
+      "task_type": "qa_testing",
+      "input": { "spec": "{{bug_report}}", "mode": "reproduce" }
+    },
+    {
+      "id": "fix",
+      "task_type": "code_implementation",
+      "depends_on": ["reproduce"],
+      "input": { "design": "{{steps.reproduce.output}}" }
+    },
+    {
+      "id": "verify",
+      "task_type": "qa_testing",
+      "depends_on": ["fix"],
+      "input": { "code_diff": "{{steps.fix.output.pr_diff}}", "mode": "verify" }
+    }
+  ]
+}
