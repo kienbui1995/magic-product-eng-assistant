@@ -125,9 +125,57 @@ MOCK_ROLES = [
 ]
 
 MOCK_KNOWLEDGE = [
-    {"id": "kb_001", "title": "API Design Standards", "content": "All APIs must follow REST conventions...", "tags": ["api", "standards"], "scope": "org"},
-    {"id": "kb_002", "title": "Release Process", "content": "1. Create branch 2. PR review 3. CI pass 4. Deploy to staging...", "tags": ["release", "process"], "scope": "org"},
-    {"id": "kb_003", "title": "Testing Guidelines", "content": "Minimum 80% coverage. E2E tests for critical paths...", "tags": ["testing", "qa"], "scope": "team"},
+    {"id": "kb_001", "title": "API Design Standards", "tags": ["api", "standards"], "scope": "org",
+     "content": """## API Design Standards (v2.1)
+
+**Base URL:** All APIs use `/api/v1/` prefix. Version in URL, not headers.
+
+**Naming:** Use plural nouns (`/users`, `/tasks`). Nest sub-resources: `/orgs/{id}/teams`.
+
+**Methods:** GET (read), POST (create), PUT (full update), PATCH (partial), DELETE (remove).
+
+**Responses:** Always return JSON. Include `id`, `created_at`, `updated_at`. Errors: `{"error": "message", "code": 400}`.
+
+**Pagination:** `?limit=100&offset=0`. Response includes `total_count`. Max limit: 1000.
+
+**Auth:** Bearer token in `Authorization` header. 401 for missing/invalid, 403 for insufficient permissions."""},
+    {"id": "kb_002", "title": "Release Process", "tags": ["release", "process", "deployment"], "scope": "org",
+     "content": """## Release Process
+
+1. **Branch** — Create `release/vX.Y.Z` from `main`
+2. **Changelog** — Update CHANGELOG.md following Keep a Changelog format
+3. **PR Review** — Minimum 2 approvals. CI must pass (tests + lint + security scan)
+4. **Tag** — `git tag vX.Y.Z` triggers release workflow
+5. **Staging** — Auto-deploy to staging. Smoke test for 30 minutes
+6. **Production** — Manual approval gate. Rolling deploy with health checks
+7. **Monitor** — Watch error rates for 1 hour post-deploy. Rollback if >1% error rate increase
+
+**Versioning:** Semantic versioning. Breaking changes = major bump. New features = minor. Fixes = patch."""},
+    {"id": "kb_003", "title": "Testing Guidelines", "tags": ["testing", "qa", "coverage"], "scope": "team",
+     "content": """## Testing Guidelines
+
+**Coverage Targets:** Unit ≥ 85%, Integration ≥ 70%, E2E covers top 10 user flows.
+
+**Unit Tests:** Test business logic in isolation. Mock external dependencies. Fast (<100ms each).
+
+**Integration Tests:** Test API endpoints with real DB (test container). Verify request/response contracts.
+
+**E2E Tests:** Playwright for critical user journeys. Run nightly + before release.
+
+**Performance Tests:** k6 load tests for new endpoints. Baseline: <100ms p95 for reads, <500ms for writes.
+
+**Security Tests:** OWASP ZAP scan on every PR. Dependency audit weekly (Snyk/Dependabot)."""},
+    {"id": "kb_004", "title": "Incident Response Playbook", "tags": ["incident", "ops", "runbook"], "scope": "org",
+     "content": """## Incident Response
+
+**Severity Levels:**
+- **P0** (Critical): Service down. All hands. Resolve <1h. Postmortem required.
+- **P1** (High): Major feature broken. On-call + backup. Resolve <4h.
+- **P2** (Medium): Degraded performance. Next business day.
+
+**Steps:** Detect → Triage → Communicate → Fix → Verify → Postmortem
+
+**Communication:** P0/P1: Slack #incidents + status page update within 15 min. Stakeholder update every 30 min."""},
 ]
 
 # ── LLM Helper ───────────────────────────────────────────────────────────────
@@ -151,11 +199,70 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
 
 def mock_output(task_type, idea="feature"):
     m = {
-        "spec_writing": {"prd": f"# PRD: {idea}", "user_stories": [f"As a user, I want {idea}"], "acceptance_criteria": ["Feature works end-to-end"]},
-        "tech_design": {"hld": f"# Design: {idea}", "modules": ["API", "Service", "DB"], "risks": ["Scope creep"]},
-        "code_implementation": {"pr_title": f"feat: {idea}", "files_changed": 7, "diff_summary": f"Implemented {idea}"},
-        "qa_testing": {"test_cases": [{"name": "Happy path", "status": "passed"}], "coverage": "87%"},
-        "release_notes": {"version": "1.4.0", "highlights": [f"New: {idea}"]},
+        "spec_writing": {
+            "prd": f"# PRD: {idea}\n\n## Problem Statement\nUsers have repeatedly requested {idea}. Current workarounds are manual and error-prone, leading to ~30% drop-off in the affected user flow.\n\n## Proposed Solution\nImplement {idea} as a first-class feature with full CRUD support, real-time sync, and backward compatibility with existing workflows.\n\n## Success Metrics\n- 20% increase in feature adoption within 30 days\n- <200ms p95 latency for all new endpoints\n- Zero data migration issues",
+            "user_stories": [
+                f"As a **power user**, I want {idea} so that I can complete my workflow 3x faster without switching tools.",
+                f"As an **admin**, I want to configure and control {idea} per team, so that I can enforce org-wide policies.",
+                f"As a **new user**, I want {idea} to have sensible defaults, so that I can get value immediately without reading docs.",
+                f"As a **developer**, I want {idea} to expose a public API, so that I can build integrations and automations.",
+            ],
+            "acceptance_criteria": [
+                f"**AC-1**: {idea} is accessible from the main navigation within 1 click.",
+                "**AC-2**: All state changes are persisted and survive page refresh.",
+                "**AC-3**: Feature is behind a feature flag, rollout-able per org.",
+                "**AC-4**: Unit test coverage ≥ 85%, E2E tests cover happy path + top 3 edge cases.",
+                "**AC-5**: Performance: <200ms p95 for read, <500ms p95 for write operations.",
+            ],
+        },
+        "tech_design": {
+            "hld": f"# Technical Design: {idea}\n\n## Architecture Decision\nWe'll implement this as a new service module within the existing monolith, with a clear interface boundary for future extraction into a microservice.\n\n## Data Model\n- New table `features` with columns: id (UUID), org_id, config (JSONB), created_at, updated_at\n- Index on (org_id, created_at) for listing queries\n- Soft delete via `deleted_at` column",
+            "modules": [
+                {"name": "API Layer", "description": "REST endpoints: GET/POST/PUT/DELETE /api/v1/features. Input validation via JSON Schema. Rate limited at 100 req/min/org."},
+                {"name": "Service Layer", "description": "Business logic: feature flag evaluation, permission checks, audit logging. Stateless, horizontally scalable."},
+                {"name": "Data Layer", "description": "PostgreSQL with JSONB for flexible config. Read replica for list queries. Redis cache (TTL 60s) for hot paths."},
+                {"name": "Event System", "description": "Publish feature.created/updated/deleted events to message bus. Consumers: audit log, analytics, webhook delivery."},
+            ],
+            "risks": [
+                {"risk": "Schema migration on large table", "severity": "high", "mitigation": "Use online DDL (pg_repack). Run migration during low-traffic window. Rollback script prepared."},
+                {"risk": "Cache invalidation complexity", "severity": "medium", "mitigation": "Event-driven invalidation. Fallback to DB on cache miss. Monitor hit rate."},
+                {"risk": "Feature flag interaction bugs", "severity": "medium", "mitigation": "Integration test matrix covering flag combinations. Gradual rollout: 1% → 10% → 50% → 100%."},
+            ],
+        },
+        "code_implementation": {
+            "pr_title": f"feat: implement {idea}",
+            "branch": f"feat/{idea.lower().replace(' ', '-')[:30]}",
+            "files_changed": 12,
+            "insertions": 847,
+            "deletions": 23,
+            "diff_summary": f"### Changes\n- **api/routes/features.py** — New CRUD endpoints with input validation\n- **services/feature_service.py** — Business logic, permission checks, event publishing\n- **models/feature.py** — SQLAlchemy model with JSONB config column\n- **migrations/003_add_features.py** — Alembic migration (reversible)\n- **tests/test_features.py** — 15 test cases (unit + integration)\n- **docs/api/features.md** — OpenAPI spec update",
+            "review_notes": "Ready for review. All CI checks pass. Tested locally with 10k rows — p95 latency: 45ms read, 120ms write.",
+        },
+        "qa_testing": {
+            "test_cases": [
+                {"name": "Happy path — create and retrieve", "status": "✅ passed", "description": f"Create {idea} via POST, verify 201. GET by ID returns correct data. Fields match input."},
+                {"name": "Validation — missing required fields", "status": "✅ passed", "description": "POST without required fields returns 400 with descriptive error. No partial data created."},
+                {"name": "Authorization — viewer cannot write", "status": "✅ passed", "description": "Viewer role gets 403 on POST/PUT/DELETE. Read operations succeed."},
+                {"name": "Concurrency — parallel updates", "status": "✅ passed", "description": "10 concurrent PUT requests. No lost updates (optimistic locking). Final state consistent."},
+                {"name": "Performance — load test", "status": "✅ passed", "description": "1000 req/s for 60s. p50: 12ms, p95: 45ms, p99: 120ms. Zero errors. Memory stable."},
+                {"name": "Edge case — max payload size", "status": "⚠️ warning", "description": "1MB JSON config accepted. 5MB rejected with 413. Consider documenting the limit."},
+            ],
+            "coverage": "91%",
+            "summary": "6/6 test cases passed (1 with advisory warning). No blockers. Ready for staging deployment.",
+        },
+        "release_notes": {
+            "version": "1.4.0",
+            "date": "2026-04-13",
+            "highlights": [
+                f"🚀 **New Feature**: {idea} — full CRUD support with real-time sync",
+                "⚡ **Performance**: Read operations now <50ms p95 (was 200ms)",
+                "🔒 **Security**: RBAC enforcement on all new endpoints",
+                "📊 **Observability**: New Prometheus metrics for feature usage tracking",
+            ],
+            "breaking_changes": "None",
+            "migration_notes": "Run `alembic upgrade head` before deploying. Migration is backward-compatible and reversible.",
+            "contributors": ["@alice (spec + design)", "@bob (implementation)", "@carol (QA)"],
+        },
     }
     return m.get(task_type, {"result": "done"})
 
@@ -183,6 +290,71 @@ m2.metric("Teams", len(MOCK_TEAMS))
 m3.metric("Cost Today", f"${total_cost:.2f}", f"budget: ${sum(t['daily_budget'] for t in MOCK_TEAMS):.0f}")
 m4.metric("Policies", len(MOCK_POLICIES), "1 active")
 m5.metric("Knowledge", len(MOCK_KNOWLEDGE), "entries")
+
+# ── Output Renderer ──────────────────────────────────────────────────────────
+def render_output(step_id, out):
+    """Render step output as rich markdown instead of raw JSON."""
+    if "prd" in out:  # spec_writing
+        st.markdown(out["prd"])
+        if "user_stories" in out:
+            st.markdown("### User Stories")
+            for s in out["user_stories"]:
+                st.markdown(f"- {s}")
+        if "acceptance_criteria" in out:
+            st.markdown("### Acceptance Criteria")
+            for ac in out["acceptance_criteria"]:
+                st.markdown(f"- {ac}")
+    elif "hld" in out:  # tech_design
+        st.markdown(out["hld"])
+        if "modules" in out:
+            st.markdown("### Modules")
+            for m in out["modules"]:
+                if isinstance(m, dict):
+                    st.markdown(f"- **{m.get('name', '?')}** — {m.get('description', '')}")
+                else:
+                    st.markdown(f"- {m}")
+        if "risks" in out:
+            st.markdown("### Risks")
+            for r in out["risks"]:
+                if isinstance(r, dict):
+                    sev = r.get("severity", "medium")
+                    icon = "🔴" if sev == "high" else "🟡" if sev == "medium" else "🟢"
+                    st.markdown(f"- {icon} **{r.get('risk', '?')}** — {r.get('mitigation', '')}")
+                else:
+                    st.markdown(f"- {r}")
+    elif "pr_title" in out:  # code_implementation
+        st.markdown(f"### {out['pr_title']}")
+        if "branch" in out:
+            st.code(f"git checkout {out['branch']}", language="bash")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Files Changed", out.get("files_changed", "?"))
+        c2.metric("Insertions", f"+{out.get('insertions', '?')}")
+        c3.metric("Deletions", f"-{out.get('deletions', '?')}")
+        if "diff_summary" in out:
+            st.markdown(out["diff_summary"])
+        if "review_notes" in out:
+            st.info(out["review_notes"])
+    elif "test_cases" in out:  # qa_testing
+        st.markdown(f"### Test Results — Coverage: {out.get('coverage', 'N/A')}")
+        if "summary" in out:
+            st.info(out["summary"])
+        for tc in out["test_cases"]:
+            if isinstance(tc, dict):
+                st.markdown(f"- {tc.get('status', '?')} **{tc.get('name', '?')}** — {tc.get('description', '')}")
+            else:
+                st.markdown(f"- {tc}")
+    elif "highlights" in out:  # release_notes
+        st.markdown(f"### Release {out.get('version', '?')} — {out.get('date', '')}")
+        for h in out["highlights"]:
+            st.markdown(f"- {h}")
+        if "breaking_changes" in out and out["breaking_changes"] != "None":
+            st.warning(f"⚠️ Breaking changes: {out['breaking_changes']}")
+        if "migration_notes" in out:
+            st.markdown(f"**Migration:** {out['migration_notes']}")
+        if "contributors" in out:
+            st.markdown(f"**Contributors:** {', '.join(out['contributors'])}")
+    else:
+        st.json(out)
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
 tab_wf, tab_workers, tab_routing, tab_policy, tab_cost, tab_kb, tab_arch = st.tabs(
@@ -248,7 +420,7 @@ with tab_wf:
             st.success(f"Workflow completed — {len(steps_def)} steps, trace_id: `trace_{random.randint(1000,9999)}`")
             for sid, out in outputs.items():
                 with st.expander(f"📄 Output: {sid}", expanded=(sid == "spec")):
-                    st.json(out)
+                    render_output(sid, out)
 
 # ── Tab 2: Workers ───────────────────────────────────────────────────────────
 with tab_workers:
