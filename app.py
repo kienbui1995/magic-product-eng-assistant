@@ -70,7 +70,7 @@ PROVIDERS = {
     "OpenAI": ("https://api.openai.com/v1", "gpt-4o-mini", "sk-..."),
     "Google Gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.0-flash", "AIza..."),
     "Groq": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "gsk_..."),
-    "OpenRouter": ("https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free", "sk-or-..."),
+    "OpenRouter": ("https://openrouter.ai/api/v1", "google/gemma-3-27b-it:free", "sk-or-..."),
     "Ollama (local)": ("http://localhost:11434/v1", "llama3", "ollama"),
     "Custom": ("", "", ""),
 }
@@ -146,7 +146,9 @@ def generate_llm_output(task_type: str, user_input: dict) -> dict:
     sys_prompt, user_prompt = prompts.get(task_type, ("Respond as JSON.", str(user_input)))
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=llm_key, base_url=llm_url)
+        client = OpenAI(api_key=llm_key, base_url=llm_url,
+                        default_headers={"HTTP-Referer": "https://magic-team-assistant.streamlit.app",
+                                         "X-Title": "Magic Product Assistant"})
         resp = client.chat.completions.create(
             model=llm_model,
             messages=[

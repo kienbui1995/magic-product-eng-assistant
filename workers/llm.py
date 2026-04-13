@@ -8,7 +8,7 @@ PROVIDERS = {
     "openai": ("https://api.openai.com/v1", "gpt-4o-mini"),
     "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.0-flash"),
     "groq": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"),
-    "openrouter": ("https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free"),
+    "openrouter": ("https://openrouter.ai/api/v1", "google/gemma-3-27b-it:free"),
     "ollama": ("http://localhost:11434/v1", "llama3"),
 }
 
@@ -40,7 +40,9 @@ def complete(system_prompt: str, user_prompt: str) -> str:
         return ""
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=_api_key, base_url=_base_url)
+        client = OpenAI(api_key=_api_key, base_url=_base_url,
+                        default_headers={"HTTP-Referer": "https://github.com/kienbui1995/magic",
+                                         "X-Title": "MagiC Worker"})
         resp = client.chat.completions.create(
             model=_model,
             messages=[
