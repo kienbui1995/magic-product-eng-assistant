@@ -65,6 +65,16 @@ def generate_mock_output(task_type: str, user_input: dict) -> dict:
 
 
 # --- Sidebar ---
+PROVIDERS = {
+    "None (mock data)": ("", "", ""),
+    "OpenAI": ("https://api.openai.com/v1", "gpt-4o-mini", "sk-..."),
+    "Google Gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.0-flash", "AIza..."),
+    "Groq": ("https://api.groq.com/openai/v1", "llama-3.3-70b-versatile", "gsk_..."),
+    "OpenRouter": ("https://openrouter.ai/api/v1", "meta-llama/llama-3.3-70b-instruct:free", "sk-or-..."),
+    "Ollama (local)": ("http://localhost:11434/v1", "llama3", "ollama"),
+    "Custom": ("", "", ""),
+}
+
 with st.sidebar:
     demo_mode = st.toggle("Demo Mode (no server needed)", value=True)
     if demo_mode:
@@ -77,6 +87,27 @@ with st.sidebar:
             st.success("🟢 Connected" if r.ok else "🟡 Server responded with error")
         except requests.ConnectionError:
             st.warning("🔴 Cannot reach server")
+
+    st.divider()
+    st.subheader("🤖 LLM Settings (BYOK)")
+    provider = st.selectbox("Provider", list(PROVIDERS.keys()))
+    default_url, default_model, key_hint = PROVIDERS[provider]
+
+    if provider == "None (mock data)":
+        st.caption("Workers will return mock data.")
+        llm_key, llm_url, llm_model = "", "", ""
+    else:
+        llm_key = st.text_input("API Key", type="password", placeholder=key_hint)
+        if provider == "Custom":
+            llm_url = st.text_input("Base URL (OpenAI-compatible)", placeholder="https://your-provider.com/v1")
+            llm_model = st.text_input("Model", placeholder="model-name")
+        else:
+            llm_url = default_url
+            llm_model = st.text_input("Model", value=default_model)
+        if llm_key:
+            st.success(f"🟢 LLM: {provider} / {llm_model}")
+        else:
+            st.caption("Enter API key to enable LLM. Workers use mock data without it.")
 
 STEP_EMOJI = {"completed": "✅", "running": "🔄", "pending": "⏳", "failed": "❌"}
 
@@ -101,8 +132,40 @@ BUG_WORKFLOW = {
 }
 
 
+def generate_llm_output(task_type: str, user_input: dict) -> dict:
+    """Call LLM via OpenAI-compatible API. Returns empty dict on failure."""
+    if not llm_key:
+        return {}
+    prompts = {
+        "spec_writing": ("You are a senior PM. Write a PRD as JSON with keys: prd_title, summary, user_stories (array), acceptance_criteria (array).", f"Feature: {user_input}"),
+        "tech_design": ("You are a senior architect. Write a technical design as JSON with keys: hld_title, modules (array of {{name, description}}), risks (array of {{risk, mitigation}}).", f"PRD: {user_input}"),
+        "code_implementation": ("You are a senior engineer. Write implementation plan as JSON with keys: pr_title, files_changed, insertions, deletions, diff_summary.", f"Design: {user_input}"),
+        "qa_testing": ("You are a senior QA. Write test plan as JSON with keys: test_cases (array of {{name, status, description}}), coverage.", f"Spec: {user_input}"),
+        "release_notes": ("You are a tech writer. Write release notes as JSON with keys: version, date, highlights (array).", f"Changes: {user_input}"),
+    }
+    sys_prompt, user_prompt = prompts.get(task_type, ("Respond as JSON.", str(user_input)))
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=llm_key, base_url=llm_url)
+        resp = client.chat.completions.create(
+            model=llm_model,
+            messages=[
+                {"role": "system", "content": sys_prompt + "\nRespond ONLY with valid JSON."},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.7,
+        )
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+        return json.loads(raw)
+    except Exception as e:
+        st.warning(f"LLM error: {e}. Falling back to mock data.")
+        return {}
+
+
 def simulate_workflow(workflow: dict):
-    """Simulate workflow execution locally with mock data."""
+    """Simulate workflow execution locally with mock or LLM data."""
     steps = workflow["steps"]
     user_input = steps[0].get("input", {})
     progress = st.empty()
@@ -119,7 +182,7 @@ def simulate_workflow(workflow: dict):
                 else:
                     st.write(f"⏳ **{s['id']}** — pending")
         time.sleep(1.5)
-        step["output"] = generate_mock_output(step["task_type"], user_input)
+        step["output"] = generate_llm_output(step["task_type"], user_input) or generate_mock_output(step["task_type"], user_input)
         step["status"] = "completed"
 
     # Final state
