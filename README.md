@@ -1,19 +1,62 @@
-# Magic Product & Engineering Assistant
+# 🪄 Magic Product & Engineering Assistant
+
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 AI-powered assistant for PM + dev teams. Uses [MagiC](https://github.com/kienbui1995/magic) as the orchestration control plane.
 
-## Architecture
+<!-- screenshot -->
+
+## Try it now
+
+### 1. Streamlit Cloud (easiest)
+
+Fork this repo, then deploy at [streamlit.io/cloud](https://streamlit.io/cloud).
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/kienbui1995/magic-product-eng-assistant/main/app.py)
+
+### 2. Railway (1-click)
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/magic-product-assistant)
+
+### 3. Render (1-click)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
+
+### 4. Docker
+
+```bash
+docker-compose up        # starts MagiC server + all workers
+# then in another terminal:
+docker build -t magic-ui .
+docker run -p 8501:8501 magic-ui
+# open http://localhost:8501
+```
+
+### 5. Local
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+# open http://localhost:8501
+```
+
+## What it does
 
 ```
-  PM / Dev
-     |
-  Slack Bot ──> MagiC Server (localhost:8080)
-                   |
-        ┌──────────┼──────────────────┐
-        v          v          v       v          v
-  SpecWriter  TechDesign  CodeImpl   QA    ReleaseNotes
-   (:9001)    (:9002)     (:9003)  (:9004)  (:9005)
+  Streamlit UI / Slack Bot
+          |
+     MagiC Server (localhost:8080)
+          |
+  ┌───────┼───────────────────┐
+  v       v       v       v   v
+Spec   Design   Code    QA  Release
+Writer         Impl        Notes
+(:9001) (:9002) (:9003) (:9004) (:9005)
 ```
+
+Submit a feature idea or bug report through the web UI. MagiC orchestrates a multi-step workflow across specialized AI workers and streams progress back in real time.
 
 ## Workers
 
@@ -27,16 +70,32 @@ AI-powered assistant for PM + dev teams. Uses [MagiC](https://github.com/kienbui
 
 ## Workflows
 
-- **feature_delivery** — End-to-end: research → spec → design → [code, qa] → release notes
-- **bug_lifecycle** — Reproduce → fix → verify
+**Feature Delivery** — spec → design → [code, qa] → release notes
 
-## Quick Start
+```
+spec → design → code ──┐
+              → qa  ───┤→ release
+```
+
+**Bug Lifecycle** — reproduce → fix → verify
+
+```
+reproduce → fix → verify
+```
+
+## Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MAGIC_SERVER_URL` | `http://localhost:8080` | MagiC server URL (set in sidebar or env) |
+
+## Development
 
 ```bash
-# 1. Start MagiC server (from magic-claw repo)
-cd /home/kienbm/magic-claw && ./bin/magic serve
+# 1. Start MagiC server
+cd /path/to/magic && ./bin/magic serve
 
-# 2. Start all workers
+# 2. Start workers
 pip install magic-ai-sdk
 python workers/spec_writer.py &
 python workers/tech_design.py &
@@ -44,24 +103,11 @@ python workers/code_implement.py &
 python workers/qa.py &
 python workers/release_notes.py &
 
-# 3. Submit a feature delivery workflow
-curl -X POST http://localhost:8080/api/v1/workflows \
-  -H "Content-Type: application/json" \
-  -d @workflows/feature_delivery.json
+# 3. Run the UI
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-Or with Docker Compose:
+## License
 
-```bash
-docker-compose up
-```
-
-## Slack Integration
-
-```bash
-export SLACK_BOT_TOKEN=xoxb-...
-export SLACK_SIGNING_SECRET=...
-python adapters/slack_bot.py
-```
-
-Use `/magic feature-launch <idea>` in Slack to kick off a feature delivery workflow.
+Apache 2.0

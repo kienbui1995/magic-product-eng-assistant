@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: magic-product-assistant
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: MAGIC_SERVER_URL
+        value: http://localhost:8080
