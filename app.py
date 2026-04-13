@@ -278,8 +278,112 @@ def get_output(task_type, user_input):
     return call_llm(sys, usr) or mock_output(task_type, str(user_input)[:50])
 
 # ── Header ───────────────────────────────────────────────────────────────────
+# Track user progress
+if "onboarded" not in st.session_state:
+    st.session_state.onboarded = False
+if "ran_workflow" not in st.session_state:
+    st.session_state.ran_workflow = False
+
+# ── ONBOARDING FLOW (first-time users) ──────────────────────────────────────
+if not st.session_state.onboarded:
+    st.markdown("# 🪄 Welcome to MagiC")
+    st.markdown("### Kubernetes for AI Agents — manage any AI worker, built with any tool")
+
+    st.markdown("")
+    st.markdown("""
+**Imagine you have a team of AI assistants** — one writes specs, one designs architecture,
+one writes code, one runs tests, one writes release notes.
+
+**The problem?** They're all separate scripts. No coordination. No visibility. No cost control.
+
+**MagiC fixes this.** It's a control plane that manages your AI workers like Kubernetes manages containers:
+""")
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("#### 1️⃣ Workers Register")
+        st.markdown("Each AI agent registers its capabilities with MagiC. Built with any framework — LangChain, CrewAI, custom code, any language.")
+    with c2:
+        st.markdown("#### 2️⃣ You Submit Tasks")
+        st.markdown('You say "write a PRD for dark mode" — MagiC automatically finds the best worker and dispatches the task.')
+    with c3:
+        st.markdown("#### 3️⃣ MagiC Orchestrates")
+        st.markdown("Multi-step workflows run automatically. Parallel execution. Cost tracking. Failure recovery. All managed.")
+
+    st.markdown("")
+    st.markdown("---")
+    st.markdown("")
+
+    st.markdown("### 🚀 Try it now — describe a feature you want to build:")
+    quick_idea = st.text_input("", placeholder="e.g. Add dark mode to the dashboard", key="onboard_idea", label_visibility="collapsed")
+
+    if st.button("✨ See MagiC in action", type="primary", key="onboard_btn"):
+        if not quick_idea:
+            quick_idea = "Add dark mode to the dashboard"
+
+        st.session_state.onboarded = True
+        st.session_state.ran_workflow = True
+        st.session_state.first_idea = quick_idea
+
+        steps = ["📝 Writing spec...", "🏗️ Designing architecture...", "💻 Writing code...", "🧪 Running tests...", "📋 Writing release notes..."]
+        step_ids = ["spec", "design", "code", "qa", "release"]
+        task_types = ["spec_writing", "tech_design", "code_implementation", "qa_testing", "release_notes"]
+        workers = ["SpecWriter", "TechDesign", "CodeImplement", "QA", "ReleaseNotes"]
+
+        progress_bar = st.progress(0, text="Starting workflow...")
+        status = st.empty()
+        outputs = {}
+
+        for i, (step_text, sid, tt, wname) in enumerate(zip(steps, step_ids, task_types, workers)):
+            progress_bar.progress((i + 1) / len(steps), text=f"{step_text} ({wname})")
+            with status.container():
+                for j, s in enumerate(step_ids):
+                    if j < i:
+                        st.markdown(f"✅ **{s}** — done")
+                    elif j == i:
+                        st.markdown(f"🔄 **{s}** — running on {workers[j]}...")
+                    else:
+                        st.markdown(f"⏳ **{s}** — waiting")
+            time.sleep(1.2 if not llm_key else 0.3)
+            outputs[sid] = get_output(tt, {"idea": quick_idea})
+
+        progress_bar.progress(1.0, text="✅ Workflow complete!")
+        with status.container():
+            for s in step_ids:
+                st.markdown(f"✅ **{s}** — done")
+
+        st.balloons()
+        st.success(f'🎉 Done! MagiC coordinated 5 AI workers to deliver "{quick_idea}" in seconds.')
+
+        for sid, out in outputs.items():
+            with st.expander(f"📄 {sid}", expanded=(sid == "spec")):
+                render_output(sid, out)
+
+        st.markdown("---")
+        st.markdown("### What just happened?")
+        st.markdown(f"""
+1. You typed **"{quick_idea}"**
+2. MagiC created a **5-step workflow** (spec → design → code + tests → release notes)
+3. Each step was **routed to the best available worker** based on capabilities
+4. Steps with no dependencies ran **in parallel** (code + tests)
+5. Every step's **cost was tracked** and checked against budget policies
+6. The entire workflow was **traced** with a single trace ID for debugging
+
+**This is what MagiC does** — it doesn't build AI agents, it manages them.
+""")
+
+        if st.button("🔍 Explore all features →", type="primary", key="explore_btn"):
+            st.rerun()
+
+    st.stop()  # Don't show the rest of the app until onboarded
+
+# ── MAIN APP (after onboarding) ─────────────────────────────────────────────
 st.markdown("# 🪄 MagiC — AI Worker Management")
 st.caption("Don't build another AI. Manage the ones you have. • [GitHub](https://github.com/kienbui1995/magic) • [Docs](https://kienbui1995.github.io/magic/docs/)")
+
+# Mode toggle
+view_mode = st.radio("", ["🟢 Essentials", "🔵 All Features"], horizontal=True, label_visibility="collapsed",
+                     help="Essentials: workflows + workers + costs. All Features: routing, policies, RBAC, knowledge, architecture.")
 
 # Top metrics
 m1, m2, m3, m4, m5 = st.columns(5)
@@ -377,8 +481,12 @@ with st.expander("💡 **Why MagiC?** — See the difference", expanded=False):
 - **Auto-recovery** — retry, skip, reassign on failure""")
 
 # ── Tabs ─────────────────────────────────────────────────────────────────────
-tab_wf, tab_workers, tab_routing, tab_policy, tab_cost, tab_kb, tab_arch = st.tabs(
-    ["🔄 Workflows", "🤖 Workers", "🧭 Routing", "🛡️ Policies & RBAC", "💰 Cost Control", "📚 Knowledge", "🏗️ Architecture"])
+if view_mode == "🟢 Essentials":
+    tab_wf, tab_workers, tab_cost = st.tabs(
+        ["🔄 Workflows — run AI pipelines", "🤖 Workers — your AI team", "💰 Costs — budget tracking"])
+else:
+    tab_wf, tab_workers, tab_routing, tab_policy, tab_cost, tab_kb, tab_arch = st.tabs(
+        ["🔄 Workflows", "🤖 Workers", "🧭 Routing", "🛡️ Policies & RBAC", "💰 Cost Control", "📚 Knowledge", "🏗️ Architecture"])
 
 # ── Tab 1: Workflows ─────────────────────────────────────────────────────────
 with tab_wf:
@@ -583,7 +691,8 @@ with tab_workers:
                       "capabilities": w["capabilities"], "limits": w["limits"]})
 
 # ── Tab 3: Routing ───────────────────────────────────────────────────────────
-with tab_routing:
+if view_mode != "🟢 Essentials":
+ with tab_routing:
     st.subheader("Capability-Based Routing")
     st.caption("MagiC routes tasks to workers based on strategy. Try different strategies below.")
 
@@ -617,7 +726,8 @@ with tab_routing:
             st.text(f"{prefix}{'🏆' if is_winner else '  '} {w['name']:15s}  load={w['current_load']}/{w['limits']['max_concurrent_tasks']}  avail={avail}  cost=${cost:.2f}")
 
 # ── Tab 4: Policies & RBAC ──────────────────────────────────────────────────
-with tab_policy:
+if view_mode != "🟢 Essentials":
+ with tab_policy:
     pc1, pc2 = st.columns(2)
 
     with pc1:
@@ -711,7 +821,8 @@ with tab_cost:
         st.text(f"  {team['name']:20s}  ${team_cost:.2f} / ${team['daily_budget']:.2f}  ({len(team_workers)} workers)")
 
 # ── Tab 6: Knowledge Hub ────────────────────────────────────────────────────
-with tab_kb:
+if view_mode != "🟢 Essentials":
+ with tab_kb:
     st.subheader("Shared Knowledge Base")
     st.caption("Workers share context via the Knowledge Hub. Supports keyword + semantic (pgvector) search.")
 
@@ -735,7 +846,8 @@ with tab_kb:
         st.rerun()
 
 # ── Tab 7: Architecture ─────────────────────────────────────────────────────
-with tab_arch:
+if view_mode != "🟢 Essentials":
+ with tab_arch:
     st.subheader("MagiC Architecture")
 
     st.subheader("Multi-Language SDKs")
