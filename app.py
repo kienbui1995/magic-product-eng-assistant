@@ -277,6 +277,71 @@ def get_output(task_type, user_input):
     sys, usr = prompts.get(task_type, ("JSON.", str(user_input)))
     return call_llm(sys, usr) or mock_output(task_type, str(user_input)[:50])
 
+# ── Output Renderer ──────────────────────────────────────────────────────────
+def render_output(step_id, out):
+    """Render step output as rich markdown instead of raw JSON."""
+    if "prd" in out:
+        st.markdown(out["prd"])
+        if "user_stories" in out:
+            st.markdown("### User Stories")
+            for s in out["user_stories"]:
+                st.markdown(f"- {s}")
+        if "acceptance_criteria" in out:
+            st.markdown("### Acceptance Criteria")
+            for ac in out["acceptance_criteria"]:
+                st.markdown(f"- {ac}")
+    elif "hld" in out:
+        st.markdown(out["hld"])
+        if "modules" in out:
+            st.markdown("### Modules")
+            for m in out["modules"]:
+                if isinstance(m, dict):
+                    st.markdown(f"- **{m.get('name', '?')}** — {m.get('description', '')}")
+                else:
+                    st.markdown(f"- {m}")
+        if "risks" in out:
+            st.markdown("### Risks")
+            for r in out["risks"]:
+                if isinstance(r, dict):
+                    sev = r.get("severity", "medium")
+                    icon = "🔴" if sev == "high" else "🟡" if sev == "medium" else "🟢"
+                    st.markdown(f"- {icon} **{r.get('risk', '?')}** — {r.get('mitigation', '')}")
+                else:
+                    st.markdown(f"- {r}")
+    elif "pr_title" in out:
+        st.markdown(f"### {out['pr_title']}")
+        if "branch" in out:
+            st.code(f"git checkout {out['branch']}", language="bash")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Files Changed", out.get("files_changed", "?"))
+        c2.metric("Insertions", f"+{out.get('insertions', '?')}")
+        c3.metric("Deletions", f"-{out.get('deletions', '?')}")
+        if "diff_summary" in out:
+            st.markdown(out["diff_summary"])
+        if "review_notes" in out:
+            st.info(out["review_notes"])
+    elif "test_cases" in out:
+        st.markdown(f"### Test Results — Coverage: {out.get('coverage', 'N/A')}")
+        if "summary" in out:
+            st.info(out["summary"])
+        for tc in out["test_cases"]:
+            if isinstance(tc, dict):
+                st.markdown(f"- {tc.get('status', '?')} **{tc.get('name', '?')}** — {tc.get('description', '')}")
+            else:
+                st.markdown(f"- {tc}")
+    elif "highlights" in out:
+        st.markdown(f"### Release {out.get('version', '?')} — {out.get('date', '')}")
+        for h in out["highlights"]:
+            st.markdown(f"- {h}")
+        if "breaking_changes" in out and out["breaking_changes"] != "None":
+            st.warning(f"⚠️ Breaking changes: {out['breaking_changes']}")
+        if "migration_notes" in out:
+            st.markdown(f"**Migration:** {out['migration_notes']}")
+        if "contributors" in out:
+            st.markdown(f"**Contributors:** {', '.join(out['contributors'])}")
+    else:
+        st.json(out)
+
 # ── Header ───────────────────────────────────────────────────────────────────
 # Track user progress
 if "onboarded" not in st.session_state:
@@ -394,71 +459,6 @@ m2.metric("Teams", len(MOCK_TEAMS))
 m3.metric("Cost Today", f"${total_cost:.2f}", f"budget: ${sum(t['daily_budget'] for t in MOCK_TEAMS):.0f}")
 m4.metric("Policies", len(MOCK_POLICIES), "1 active")
 m5.metric("Knowledge", len(MOCK_KNOWLEDGE), "entries")
-
-# ── Output Renderer ──────────────────────────────────────────────────────────
-def render_output(step_id, out):
-    """Render step output as rich markdown instead of raw JSON."""
-    if "prd" in out:  # spec_writing
-        st.markdown(out["prd"])
-        if "user_stories" in out:
-            st.markdown("### User Stories")
-            for s in out["user_stories"]:
-                st.markdown(f"- {s}")
-        if "acceptance_criteria" in out:
-            st.markdown("### Acceptance Criteria")
-            for ac in out["acceptance_criteria"]:
-                st.markdown(f"- {ac}")
-    elif "hld" in out:  # tech_design
-        st.markdown(out["hld"])
-        if "modules" in out:
-            st.markdown("### Modules")
-            for m in out["modules"]:
-                if isinstance(m, dict):
-                    st.markdown(f"- **{m.get('name', '?')}** — {m.get('description', '')}")
-                else:
-                    st.markdown(f"- {m}")
-        if "risks" in out:
-            st.markdown("### Risks")
-            for r in out["risks"]:
-                if isinstance(r, dict):
-                    sev = r.get("severity", "medium")
-                    icon = "🔴" if sev == "high" else "🟡" if sev == "medium" else "🟢"
-                    st.markdown(f"- {icon} **{r.get('risk', '?')}** — {r.get('mitigation', '')}")
-                else:
-                    st.markdown(f"- {r}")
-    elif "pr_title" in out:  # code_implementation
-        st.markdown(f"### {out['pr_title']}")
-        if "branch" in out:
-            st.code(f"git checkout {out['branch']}", language="bash")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Files Changed", out.get("files_changed", "?"))
-        c2.metric("Insertions", f"+{out.get('insertions', '?')}")
-        c3.metric("Deletions", f"-{out.get('deletions', '?')}")
-        if "diff_summary" in out:
-            st.markdown(out["diff_summary"])
-        if "review_notes" in out:
-            st.info(out["review_notes"])
-    elif "test_cases" in out:  # qa_testing
-        st.markdown(f"### Test Results — Coverage: {out.get('coverage', 'N/A')}")
-        if "summary" in out:
-            st.info(out["summary"])
-        for tc in out["test_cases"]:
-            if isinstance(tc, dict):
-                st.markdown(f"- {tc.get('status', '?')} **{tc.get('name', '?')}** — {tc.get('description', '')}")
-            else:
-                st.markdown(f"- {tc}")
-    elif "highlights" in out:  # release_notes
-        st.markdown(f"### Release {out.get('version', '?')} — {out.get('date', '')}")
-        for h in out["highlights"]:
-            st.markdown(f"- {h}")
-        if "breaking_changes" in out and out["breaking_changes"] != "None":
-            st.warning(f"⚠️ Breaking changes: {out['breaking_changes']}")
-        if "migration_notes" in out:
-            st.markdown(f"**Migration:** {out['migration_notes']}")
-        if "contributors" in out:
-            st.markdown(f"**Contributors:** {', '.join(out['contributors'])}")
-    else:
-        st.json(out)
 
 # ── Why MagiC? ───────────────────────────────────────────────────────────────
 with st.expander("💡 **Why MagiC?** — See the difference", expanded=False):
